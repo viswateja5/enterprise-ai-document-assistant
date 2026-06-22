@@ -1,6 +1,6 @@
 services:
   - type: web
-      plan: free
+   plan: free
     name: enterprise-ai-document-assistant-backend
     env: python
     rootDir: backend
