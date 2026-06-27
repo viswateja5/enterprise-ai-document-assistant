@@ -39,7 +39,9 @@ export default function Sidebar({
   onOpenDashboard,
   onOpenSettings,
   activeTab = 'chat',
-  onChangeTab
+  onChangeTab,
+  tokensLeft = 100000,
+  onResetTokens
 }) {
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState(null);
@@ -225,7 +227,7 @@ export default function Sidebar({
           </div>
           {!isCollapsed && (
             <span className="font-extrabold text-sm tracking-wide text-[#1E293B] animate-fade-in">
-              DocAssistant AI
+              DocVerse AI
             </span>
           )}
         </div>
@@ -255,14 +257,22 @@ export default function Sidebar({
         
         {!isCollapsed && (
           <div className="space-y-3 animate-fade-in">
-            <div className="grid grid-cols-2 gap-2 text-[9px] bg-[#F5F7FA] p-2 rounded-xl border border-[#E2E8F0] font-medium text-[#64748B]">
+            <div className="grid grid-cols-3 gap-1.5 text-[9px] bg-[#F5F7FA] p-2 rounded-xl border border-[#E2E8F0] font-medium text-[#64748B] select-none">
               <div>
                 <span className="block font-bold text-slate-400 uppercase tracking-wider text-[8px]">Sessions</span>
-                <span className="text-[10px] font-bold text-indigo-600">{sessionCount} threads</span>
+                <span className="text-[10px] font-bold text-indigo-600 truncate block">{sessionCount} threads</span>
               </div>
               <div>
                 <span className="block font-bold text-slate-400 uppercase tracking-wider text-[8px]">Ingested</span>
-                <span className="text-[10px] font-bold text-violet-650">{docCount} docs</span>
+                <span className="text-[10px] font-bold text-violet-650 truncate block">{docCount} docs</span>
+              </div>
+              <div 
+                onClick={onResetTokens} 
+                className="cursor-pointer hover:bg-slate-200/50 p-0.5 rounded transition-all" 
+                title="Click to refill tokens"
+              >
+                <span className="block font-bold text-slate-400 uppercase tracking-wider text-[8px]">Tokens Left</span>
+                <span className="text-[10px] font-bold text-emerald-600 truncate block">{tokensLeft?.toLocaleString() || "100,000"}</span>
               </div>
             </div>
             

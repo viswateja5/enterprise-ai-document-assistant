@@ -44,7 +44,7 @@ export default function Login({ onLoginSuccess, onNavigateToSignup }) {
             <Database className="w-7 h-7 text-[#6366F1] dark:text-indigo-400" />
           </div>
           <h1 className="text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Welcome Back</h1>
-          <p className="text-xs text-slate-400 mt-1 font-mono uppercase tracking-widest">DocAssistant AI</p>
+          <p className="text-xs text-slate-400 mt-1 font-mono uppercase tracking-widest">DocVerse AI</p>
         </div>
 
         {/* User / Admin Tab Selector */}

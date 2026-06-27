@@ -63,6 +63,16 @@ function MainApp() {
   const [globalSearch, setGlobalSearch] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'study' | 'graph' | 'preview'
+  const [tokensLeft, setTokensLeft] = useState(() => {
+    const saved = localStorage.getItem('rag_tokens_left');
+    return saved ? parseInt(saved, 10) : 100000;
+  });
+
+  const handleResetTokens = () => {
+    setTokensLeft(100000);
+    localStorage.setItem('rag_tokens_left', '100000');
+    addToast("Tokens refilled to 100,000!", "success");
+  };
 
   // Study workspace state
   const [studyType, setStudyType] = useState('mcqs'); // 'mcqs' | 'flashcards' | 'interview' | 'notes'
@@ -324,6 +334,14 @@ function MainApp() {
       [sessionId]: [...currentMsgs, userMsg, assistantMsg]
     }));
     
+    // Deduct prompt input tokens
+    setTokensLeft(prev => {
+      const inputTokens = Math.max(5, Math.ceil(text.trim().split(/\s+/).length / 0.75));
+      const next = Math.max(0, prev - inputTokens);
+      localStorage.setItem('rag_tokens_left', next.toString());
+      return next;
+    });
+
     setIsLoading(true);
 
     let streamAnswer = "";
@@ -360,6 +378,12 @@ function MainApp() {
         (token) => {
           streamAnswer += token;
           updateAssistantState(streamAnswer, streamSources, streamDecision, streamTrace, streamConfidence);
+          
+          setTokensLeft(prev => {
+            const next = Math.max(0, prev - 1);
+            localStorage.setItem('rag_tokens_left', next.toString());
+            return next;
+          });
         },
         (sources) => {
           streamSources = sources;
@@ -532,6 +556,8 @@ function MainApp() {
         setActiveTab(tab);
         navigateTo('/dashboard');
       }}
+      tokensLeft={tokensLeft}
+      onResetTokens={handleResetTokens}
     >
       {path === '/login' && (
         <Login 

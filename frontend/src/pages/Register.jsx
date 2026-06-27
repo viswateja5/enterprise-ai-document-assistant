@@ -53,7 +53,7 @@ export default function Register({ onSignupSuccess, onNavigateToLogin }) {
             <Database className="w-7 h-7 text-[#6366F1] dark:text-indigo-400" />
           </div>
           <h1 className="text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Create Account</h1>
-          <p className="text-xs text-slate-400 mt-1 font-mono uppercase tracking-widest">Register for AI Document Search</p>
+          <p className="text-xs text-slate-400 mt-1 font-mono uppercase tracking-widest">Register for DocVerse AI</p>
         </div>
 
         {error && (

@@ -32,7 +32,9 @@ export default function Layout({
   onLogout,
   activeTab,
   onChangeTab,
-  userRole = 'user'
+  userRole = 'user',
+  tokensLeft,
+  onResetTokens
 }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     return localStorage.getItem('sidebar_collapsed') === 'true';
@@ -112,6 +114,8 @@ export default function Layout({
             onOpenSettings={() => setSettingsOpen(true)}
             activeTab={activeTab}
             onChangeTab={onChangeTab}
+            tokensLeft={tokensLeft}
+            onResetTokens={onResetTokens}
           />
         </div>
       )}
@@ -147,7 +151,7 @@ export default function Layout({
                 <Database className="w-4 h-4 text-[#6366F1]" />
               </div>
               <span className="font-extrabold text-sm tracking-wide text-[#1E293B]">
-                DocAssistant AI
+                DocVerse AI
               </span>
             </div>
           </div>
@@ -284,7 +288,7 @@ export default function Layout({
 
         {/* Minimalist Professional Footer */}
         <footer className="h-10 border-t border-[#E2E8F0] bg-white px-6 flex items-center justify-center text-[9px] text-[#64748B] uppercase tracking-widest font-mono shrink-0 select-none">
-          <span>© 2026 Enterprise AI Document Assistant | Privacy Policy | Terms of Service | Version 2.1.0</span>
+          <span>© 2026 DocVerse AI | Privacy Policy | Terms of Service | Version 2.1.0</span>
         </footer>
       </div>
 
@@ -382,6 +386,8 @@ export default function Layout({
               }}
               activeTab={activeTab}
               onChangeTab={onChangeTab}
+              tokensLeft={tokensLeft}
+              onResetTokens={onResetTokens}
             />
           </motion.div>
           <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />

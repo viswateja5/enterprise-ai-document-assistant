@@ -53,7 +53,7 @@ const getHeaders = () => {
 
 const checkConnection = async () => {
   try {
-    const res = await axios.get(`${API_BASE}/health`, { timeout: 800 });
+    const res = await axios.get(`${API_BASE}/health`, { timeout: 4000 });
     isOfflineMode = !(res.data && res.data.status === "healthy");
   } catch (e) {
     isOfflineMode = true;
@@ -201,7 +201,7 @@ export const checkHealth = async () => {
   if (!isOfflineMode) {
     return { status: "online" };
   }
-  return { status: "online" }; // offline mode acts online client-side
+  return { status: "offline" };
 };
 
 // Generates educational study materials from parsed text chunks client-side
@@ -623,125 +623,123 @@ export const queryStream = async (
   onConfidence,
   onIntent
 ) => {
-  await checkConnection();
-  if (!isOfflineMode) {
-    try {
-      onDecision("agent");
-      onTrace([
-        "Connecting to remote agent graph...",
-        "Awaiting query dispatch..."
-      ]);
+  // 1. Try querying the backend first (this wakes up a sleeping server naturally)
+  try {
+    onDecision("agent");
+    onTrace([
+      "Connecting to remote agent graph...",
+      "Awaiting query dispatch..."
+    ]);
+    
+    const response = await fetch(`${API_BASE}/agent/query`, {
+      method: 'POST',
+      headers: {
+        ...getHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        question,
+        session_id: sessionId,
+        global_search: globalSearch
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Remote query failed: HTTP ${response.status}`);
+    }
+    
+    isOfflineMode = false;
+    
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
       
-      const response = await fetch(`${API_BASE}/agent/query`, {
-        method: 'POST',
-        headers: {
-          ...getHeaders(),
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          question,
-          session_id: sessionId,
-          global_search: globalSearch
-        })
-      });
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
       
-      if (!response.ok) {
-        throw new Error(`Remote query failed: HTTP ${response.status}`);
-      }
-      
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder('utf-8');
-      let buffer = '';
-      
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        
-        for (const line of lines) {
-          if (line.trim().startsWith('data: ')) {
-            const rawData = line.trim().slice(6);
-            try {
-              const parsed = JSON.parse(rawData);
-              if (parsed.type === 'sources') {
-                onSources(parsed.data);
-              } else if (parsed.type === 'content') {
-                onToken(parsed.data);
-              } else if (parsed.type === 'decision') {
-                onDecision(parsed.data);
-              } else if (parsed.type === 'confidence') {
-                onConfidence(parsed.data);
-              } else if (parsed.type === 'intent') {
-                if (typeof onIntent === 'function') onIntent(parsed.data);
-              } else if (parsed.type === 'trace') {
-                onTrace(parsed.data);
-              }
-            } catch (e) {
-              // JSON parse error
+      for (const line of lines) {
+        if (line.trim().startsWith('data: ')) {
+          const rawData = line.trim().slice(6);
+          try {
+            const parsed = JSON.parse(rawData);
+            if (parsed.type === 'sources') {
+              onSources(parsed.data);
+            } else if (parsed.type === 'content') {
+              onToken(parsed.data);
+            } else if (parsed.type === 'decision') {
+              onDecision(parsed.data);
+            } else if (parsed.type === 'confidence') {
+              onConfidence(parsed.data);
+            } else if (parsed.type === 'intent') {
+              if (typeof onIntent === 'function') onIntent(parsed.data);
+            } else if (parsed.type === 'trace') {
+              onTrace(parsed.data);
             }
+          } catch (e) {
+            // JSON parse error
           }
         }
       }
-      
-      onConfidence(0.95);
-      onDone();
-    } catch (err) {
-      onError(err);
     }
+    
+    onConfidence(0.95);
+    onDone();
     return;
+  } catch (err) {
+    console.warn("Remote query connection failed, falling back to local offline mock:", err);
+    isOfflineMode = true;
   }
 
+  // 2. Local offline mock fallback
   try {
     const cleanQ = question.toLowerCase().trim().replace(/[?.!]/g, "");
     const username = localStorage.getItem('rag_username') || "Explorer";
     
-    // Client-side classification logic
     let intent = "general_knowledge";
     let decision = "llm";
     let answer = "";
     
-    const isGreeting = /^(hi|hello|hey|yo|g'day|good\s+(morning|afternoon|evening|night))$/.test(cleanQ);
-    const isHelp = /^(what\s+can\s+you\s+do|help|features)$/.test(cleanQ);
-    const isAboutMe = /^(who\s+are\s+you|what\s+is\s+your\s+name|about\s+yourself)$/.test(cleanQ);
-    const isJoke = /^(tell\s+me\s+a\s+joke|joke)$/.test(cleanQ);
-    const isThankYou = /^(thank\s+you|thanks|appreciate\s+it)$/.test(cleanQ);
-    const isGoodbye = /^(bye|goodbye|see\s+you|talk\s+to\s+you\s+later)$/.test(cleanQ);
+    // Simulate thinking steps
+    onDecision("agent");
+    onTrace([
+      "Offline local agent initialized.",
+      "Analyzing query intent locally..."
+    ]);
     
-    const isDocRelated = /(document|pdf|uploaded|file|text|paper|summary|csv|excel|xlsx)/.test(cleanQ);
+    await delay(350);
     
-    if (isGreeting) {
+    if (cleanQ === "hi" || cleanQ === "hello" || cleanQ === "hey") {
       intent = "greeting";
-      decision = "llm";
-      answer = `Hi ${username}! 👋\nHow can I help you today?\n\n📄 Ask questions about uploaded documents\n🌐 Ask real-time questions\n📝 Generate MCQs and notes\n🎓 Prepare for exams and interviews`;
-    } else if (isHelp || isAboutMe) {
-      intent = "greeting";
-      decision = "llm";
-      answer = `I am your next-generation Conversational AI Assistant. I operate in hybrid online/offline mode. Here is what I can do for you:\n\n1. **Smart Retrieval**: Search your uploaded documents using semantic and keyword matching.\n2. **Web Search**: Query real-time news and events.\n3. **Study Workspace**: Generate custom MCQ quizzes, interactive flashcards, interview guides, and revision sheets.\n4. **Graph Explorer**: Map entity connections and find paths.`;
-    } else if (isJoke) {
-      intent = "casual";
-      decision = "llm";
-      answer = `Why did the vector database break up with the relational database?\n\nBecause they had too many *unstructured* arguments! 😄`;
-    } else if (isThankYou) {
-      intent = "casual";
-      decision = "llm";
-      answer = `You are very welcome! Let me know if there's anything else I can help you with. 😊`;
-    } else if (isGoodbye) {
-      intent = "casual";
-      decision = "llm";
-      answer = `Goodbye ${username}! Let's chat again soon. Have a wonderful day! 👋`;
-    } else if (isDocRelated) {
-      intent = "document";
-      decision = "rag";
+      decision = "rule_based";
+      answer = `Hello ${username}! I'm running in offline local mode because I couldn't reach the backend. How can I help you today?`;
+    } else if (cleanQ.includes("help") || cleanQ.includes("what can you do")) {
+      intent = "help";
+      decision = "rule_based";
+      answer = "I can search documents, answer queries based on uploaded files, and help you prepare for exams or interviews. Since I'm offline, upload and remote search are disabled.";
+    } else if (cleanQ.includes("joke")) {
+      intent = "joke";
+      decision = "rule_based";
+      answer = "Why don't databases go on dates? Because they prefer one-to-many relationships! 😄";
+    } else if (cleanQ.includes("thank")) {
+      intent = "thanks";
+      decision = "rule_based";
+      answer = "You're very welcome! Let me know if you need anything else.";
+    } else if (cleanQ.includes("bye") || cleanQ.includes("exit")) {
+      intent = "goodbye";
+      decision = "rule_based";
+      answer = `Goodbye ${username}! Hope to see you online soon.`;
     } else {
+      // General knowledge / Greeting / Casual
       intent = "general_knowledge";
       decision = "llm";
-      answer = `I can help you with general knowledge, coding, or document analysis. To analyze documents, please select a file and click "Ingest Document" in the sidebar!`;
+      answer = `I am running in local offline mode because I couldn't connect to the backend server. To answer general knowledge queries (like "${question}"), please ensure the backend server is running and the connection indicator is Green (ONLINE).`;
     }
 
-    onDecision(decision);
     if (typeof onIntent === 'function') onIntent(intent);
 
     if (intent === "document") {
