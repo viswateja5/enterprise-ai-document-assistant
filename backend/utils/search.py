@@ -1,23 +1,23 @@
 from typing import List, Optional
-from langchain_community.vectorstores import FAISS
-from langchain_community.retrievers import BM25Retriever
-from langchain_classic.retrievers import EnsembleRetriever
 from langchain_core.documents import Document
 
 def create_hybrid_retriever(
-    db: FAISS,
+    db,
     top_k: int = 10,
     session_id: Optional[str] = None,
     global_search: bool = False,
     page: Optional[int] = None,
     document_name: Optional[str] = None
-) -> EnsembleRetriever:
+):
     """
     Creates an EnsembleRetriever combining BM25 (sparse keyword search) 
     and FAISS (dense semantic search), scoped to the active session and metadata filters.
     
     Weights: semantic (FAISS) = 0.7, keyword (BM25) = 0.3
     """
+    from langchain_community.vectorstores import FAISS
+    from langchain_community.retrievers import BM25Retriever
+    from langchain_classic.retrievers import EnsembleRetriever
     all_documents = list(db.docstore._dict.values())
     
     # Apply filtering constraints to the lexical document list (BM25)

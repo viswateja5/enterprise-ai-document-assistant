@@ -1,6 +1,5 @@
 import os
 from typing import List
-from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 
 def save_or_update_vector_store(
@@ -8,7 +7,7 @@ def save_or_update_vector_store(
     embeddings,
     store_path: str,
     index_name: str = "index"
-) -> FAISS:
+):
     """
     Saves document chunks into a local FAISS index.
     
@@ -16,6 +15,7 @@ def save_or_update_vector_store(
     the new document chunks, and saves it. If the index does not exist, it 
     creates a new FAISS index from the chunks and saves it.
     """
+    from langchain_community.vectorstores import FAISS
     os.makedirs(store_path, exist_ok=True)
     
     faiss_file = os.path.join(store_path, f"{index_name}.faiss")
@@ -42,10 +42,11 @@ def load_vector_store(
     store_path: str,
     embeddings,
     index_name: str = "index"
-) -> FAISS:
+):
     """
     Loads an existing FAISS vector store from the local filesystem.
     """
+    from langchain_community.vectorstores import FAISS
     faiss_file = os.path.join(store_path, f"{index_name}.faiss")
     pkl_file = os.path.join(store_path, f"{index_name}.pkl")
     

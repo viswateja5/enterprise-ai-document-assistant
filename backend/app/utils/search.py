@@ -1,13 +1,10 @@
 from typing import List
-from langchain_community.vectorstores import FAISS
-from langchain_community.retrievers import BM25Retriever
-from langchain.retrievers import EnsembleRetriever
 from langchain_core.documents import Document
 
 def create_hybrid_retriever(
-    db: FAISS,
+    db,
     top_k: int = 10
-) -> EnsembleRetriever:
+):
     """
     Creates an EnsembleRetriever combining BM25 (sparse keyword search) 
     and FAISS (dense semantic search).
@@ -22,6 +19,9 @@ def create_hybrid_retriever(
     Returns:
         EnsembleRetriever: The combined hybrid search retriever.
     """
+    from langchain_community.vectorstores import FAISS
+    from langchain_community.retrievers import BM25Retriever
+    from langchain.retrievers import EnsembleRetriever
     # Extract all documents from the FAISS internal docstore memory
     all_documents = list(db.docstore._dict.values())
     
