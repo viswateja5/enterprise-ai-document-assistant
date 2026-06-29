@@ -229,27 +229,34 @@ async def synthesize_reasoning(state: AgentState) -> dict:
     except Exception as e:
         logger.warning(f"Default model synthesis failed: {e}. Executing fallback model...")
         try:
-            if os.getenv("GROQ_API_KEY"):
+            from services.llm_factory import get_clean_env_var
+            groq_key = get_clean_env_var("GROQ_API_KEY")
+            google_key = get_clean_env_var("GOOGLE_API_KEY")
+            openai_key = get_clean_env_var("OPENAI_API_KEY")
+            
+            if groq_key:
                 from langchain_groq import ChatGroq
                 fallback_llm = ChatGroq(
                     model="llama-3.1-8b-instant", 
-                    groq_api_key=os.getenv("GROQ_API_KEY"), 
+                    groq_api_key=groq_key, 
                     temperature=0.0
                 )
-            elif os.getenv("GOOGLE_API_KEY"):
+            elif google_key:
                 from langchain_google_genai import ChatGoogleGenerativeAI
                 fallback_llm = ChatGoogleGenerativeAI(
                     model="gemini-1.5-flash",
-                    google_api_key=os.getenv("GOOGLE_API_KEY"),
+                    google_api_key=google_key,
                     temperature=0.0
                 )
-            else:
+            elif openai_key:
                 from langchain_openai import ChatOpenAI
                 fallback_llm = ChatOpenAI(
                     model="gpt-4o-mini",
-                    openai_api_key=os.getenv("OPENAI_API_KEY"),
+                    openai_api_key=openai_key,
                     temperature=0.0
                 )
+            else:
+                raise ValueError("No valid API keys configured for fallback.")
             res = await fallback_llm.ainvoke(prompt)
             answer = res.content
             reasoning_trace.append("Final answer synthesized using fallback model.")

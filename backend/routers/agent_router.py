@@ -208,30 +208,37 @@ async def stream_agent_reasoning(
         except Exception as e:
             logger.warning(f"Streaming failed: {e}. Falling back to alternative model...")
             try:
-                if os.getenv("GROQ_API_KEY"):
+                from services.llm_factory import get_clean_env_var
+                groq_key = get_clean_env_var("GROQ_API_KEY")
+                google_key = get_clean_env_var("GOOGLE_API_KEY")
+                openai_key = get_clean_env_var("OPENAI_API_KEY")
+                
+                if groq_key:
                     from langchain_groq import ChatGroq
                     fallback_llm = ChatGroq(
                         model="llama-3.1-8b-instant", 
-                        groq_api_key=os.getenv("GROQ_API_KEY"), 
+                        groq_api_key=groq_key, 
                         temperature=0.0,
                         streaming=True
                     )
-                elif os.getenv("GOOGLE_API_KEY"):
+                elif google_key:
                     from langchain_google_genai import ChatGoogleGenerativeAI
                     fallback_llm = ChatGoogleGenerativeAI(
                         model="gemini-1.5-flash",
-                        google_api_key=os.getenv("GOOGLE_API_KEY"),
+                        google_api_key=google_key,
+                        temperature=0.0,
+                        streaming=True
+                    )
+                elif openai_key:
+                    from langchain_openai import ChatOpenAI
+                    fallback_llm = ChatOpenAI(
+                        model="gpt-4o-mini",
+                        openai_api_key=openai_key,
                         temperature=0.0,
                         streaming=True
                     )
                 else:
-                    from langchain_openai import ChatOpenAI
-                    fallback_llm = ChatOpenAI(
-                        model="gpt-4o-mini",
-                        openai_api_key=os.getenv("OPENAI_API_KEY"),
-                        temperature=0.0,
-                        streaming=True
-                    )
+                    raise ValueError("No valid API keys configured for fallback.")
                 async for chunk in fallback_llm.astream(prompt):
                     token = chunk.content
                     if token:

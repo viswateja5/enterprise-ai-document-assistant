@@ -1,6 +1,19 @@
 import os
 from typing import Any
 
+def get_clean_env_var(name: str) -> str:
+    """
+    Retrieves environment variable and returns empty string if value is
+    unset, empty, or literally "undefined", "null", or "none".
+    """
+    val = os.getenv(name)
+    if not val:
+        return ""
+    val_clean = val.strip().lower()
+    if val_clean in ("", "undefined", "null", "none"):
+        return ""
+    return val
+
 def get_llm(streaming: bool = True, temperature: float = 0.0) -> Any:
     """
     Dynamically instantiates and returns the configured LLM provider client
@@ -10,56 +23,57 @@ def get_llm(streaming: bool = True, temperature: float = 0.0) -> Any:
     """
     provider = os.getenv("MODEL_PROVIDER", "openai").lower()
     
+    openai_key = get_clean_env_var("OPENAI_API_KEY")
+    google_key = get_clean_env_var("GOOGLE_API_KEY")
+    groq_key = get_clean_env_var("GROQ_API_KEY")
+    
     # Auto-fallback detection if the chosen provider's key is not set
-    if provider == "openai" and not os.getenv("OPENAI_API_KEY"):
-        if os.getenv("GOOGLE_API_KEY"):
+    if provider == "openai" and not openai_key:
+        if google_key:
             provider = "gemini"
-        elif os.getenv("GROQ_API_KEY"):
+        elif groq_key:
             provider = "groq"
-    elif provider == "gemini" and not os.getenv("GOOGLE_API_KEY"):
-        if os.getenv("OPENAI_API_KEY"):
+    elif provider == "gemini" and not google_key:
+        if openai_key:
             provider = "openai"
-        elif os.getenv("GROQ_API_KEY"):
+        elif groq_key:
             provider = "groq"
-    elif provider == "groq" and not os.getenv("GROQ_API_KEY"):
-        if os.getenv("OPENAI_API_KEY"):
+    elif provider == "groq" and not groq_key:
+        if openai_key:
             provider = "openai"
-        elif os.getenv("GOOGLE_API_KEY"):
+        elif google_key:
             provider = "gemini"
     
     if provider == "openai":
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable is missing.")
+        if not openai_key:
+            raise ValueError("No valid OpenAI API key found. Please configure OPENAI_API_KEY.")
         from langchain_openai import ChatOpenAI
         return ChatOpenAI(
             model="gpt-4o-mini", 
             temperature=temperature, 
             streaming=streaming,
-            openai_api_key=api_key
+            openai_api_key=openai_key
         )
         
     elif provider == "gemini":
-        api_key = os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            raise ValueError("GOOGLE_API_KEY environment variable is missing.")
+        if not google_key:
+            raise ValueError("No valid Gemini API key found. Please configure GOOGLE_API_KEY.")
         # Lazy import to avoid loading unused packages
         from langchain_google_genai import ChatGoogleGenerativeAI
         return ChatGoogleGenerativeAI(
             model="gemini-1.5-flash", 
-            google_api_key=api_key, 
+            google_api_key=google_key, 
             temperature=temperature, 
             streaming=streaming
         )
         
     elif provider == "groq":
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            raise ValueError("GROQ_API_KEY environment variable is missing.")
+        if not groq_key:
+            raise ValueError("No valid Groq API key found. Please configure GROQ_API_KEY.")
         from langchain_groq import ChatGroq
         return ChatGroq(
-           model="llama-3.3-70b-versatile", 
-            groq_api_key=api_key, 
+            model="llama-3.3-70b-versatile", 
+            groq_api_key=groq_key, 
             temperature=temperature, 
             streaming=streaming
         )
