@@ -45,11 +45,20 @@ async def lifespan(app: FastAPI):
     """
     logger.info("Initializing Enterprise AI Document Assistant backend...")
     
-    # 1. Initialize Tables
-    await init_db()
-    
-    # 2. Connect to Cache
-    await init_redis()
+    async def startup_tasks():
+        try:
+            await init_db()
+            logger.info("Database initialized successfully in background.")
+        except Exception as e:
+            logger.error(f"Database initialization failed in background: {e}")
+            
+        try:
+            await init_redis()
+        except Exception as e:
+            logger.error(f"Redis initialization failed in background: {e}")
+
+    import asyncio
+    asyncio.create_task(startup_tasks())
     
     # 3. ML Models are lazy loaded on demand to minimize startup RAM below 100 MB.
     logger.info("ML Models deferred (lazy loaded on active search/study queries).")
